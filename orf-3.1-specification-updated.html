@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The One Ring Framework v3.1 — Builder / Auditor Protocol</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FFFFFF;
+    --tint:#F6F7F9;
+    --ink:#14181F;
+    --ink-2:#3D4557;
+    --body:#2A3140;
+    --muted:#6B7488;
+    --rule:#D9DDE4;
+    --rule-2:#EDEFF3;
+    --navy:#12294F;
+    --gold:#9A7415;
+    --stop:#A32E14;
+    --sans:'IBM Plex Sans',system-ui,-apple-system,sans-serif;
+    --serif:'IBM Plex Serif',Georgia,serif;
+    --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:#E8EAEE;color:var(--body);
+    font-family:var(--serif);font-size:16px;line-height:1.62;
+  }
+  .page{
+    max-width:860px;margin:0 auto;background:var(--paper);
+    padding:0 clamp(20px,6vw,76px) 90px;
+    box-shadow:0 0 0 1px rgba(20,24,31,.06),0 30px 80px -50px rgba(20,24,31,.5);
+  }
+
+  /* ---------- title block ---------- */
+  .titleblock{padding:clamp(40px,7vw,80px) 0 0}
+  .org{
+    font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--gold);display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+    padding-bottom:18px;border-bottom:2px solid var(--ink)
+  }
+  .org .dot{width:6px;height:6px;background:var(--gold);border-radius:50%}
+  h1.doc{
+    font-family:var(--sans);font-size:clamp(30px,5vw,46px);font-weight:700;letter-spacing:-.03em;
+    line-height:1.06;color:var(--ink);margin:30px 0 10px
+  }
+  .subtitle{
+    font-family:var(--sans);font-size:clamp(16px,2.2vw,20px);font-weight:400;color:var(--muted);
+    margin:0 0 30px;letter-spacing:-.01em
+  }
+  table.control{
+    width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.5px;margin-bottom:34px
+  }
+  table.control td{
+    border-top:1px solid var(--rule);padding:9px 0;vertical-align:top;color:var(--ink)
+  }
+  table.control td:first-child{
+    width:34%;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-size:11px;
+    padding-right:16px
+  }
+  .status-draft{color:var(--stop);font-weight:600}
+
+  /* ---------- rule zero plate ---------- */
+  .plate{
+    border:1px solid var(--rule);border-left:3px solid var(--gold);background:var(--tint);
+    padding:26px 28px;margin:0 0 40px
+  }
+  .plate .lbl{
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--gold);margin-bottom:10px
+  }
+  .plate p{margin:0;font-size:19px;line-height:1.45;color:var(--ink)}
+  .plate p + p{margin-top:12px;font-size:15px;color:var(--body)}
+
+  /* ---------- contents ---------- */
+  nav.toc{border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:22px 0;margin-bottom:46px}
+  nav.toc h2{
+    font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 14px;font-weight:500
+  }
+  nav.toc ol{list-style:none;margin:0;padding:0;columns:2;column-gap:40px;font-family:var(--sans);font-size:14px}
+  nav.toc li{margin-bottom:6px;break-inside:avoid}
+  nav.toc a{color:var(--ink);text-decoration:none;border-bottom:1px solid transparent}
+  nav.toc a:hover,nav.toc a:focus{border-bottom-color:var(--gold)}
+  nav.toc .n{font-family:var(--mono);font-size:12px;color:var(--muted);margin-right:8px}
+
+  /* ---------- sections ---------- */
+  section{margin-bottom:52px}
+  h2.sec{
+    font-family:var(--sans);font-size:clamp(19px,2.6vw,25px);font-weight:600;letter-spacing:-.02em;
+    color:var(--ink);margin:0 0 6px;padding-top:14px;border-top:2px solid var(--ink)
+  }
+  h2.sec .n{font-family:var(--mono);font-size:14px;color:var(--gold);margin-right:12px;font-weight:500}
+  .lede{color:var(--muted);font-size:15px;margin:0 0 22px;max-width:70ch}
+  h3.sub{
+    font-family:var(--sans);font-size:16px;font-weight:600;color:var(--ink);margin:28px 0 8px;
+    letter-spacing:-.01em
+  }
+  p{margin:0 0 14px}
+  ul,ol.plain{margin:0 0 16px;padding-left:20px}
+  li{margin-bottom:7px}
+
+  /* ---------- normative clauses ---------- */
+  .clause{
+    display:grid;grid-template-columns:78px 1fr;gap:0 18px;padding:13px 0;
+    border-top:1px solid var(--rule-2)
+  }
+  .clause:last-child{border-bottom:1px solid var(--rule-2)}
+  .clause .id{
+    font-family:var(--mono);font-size:11.5px;color:var(--gold);padding-top:3px;letter-spacing:.02em
+  }
+  .clause .txt{margin:0;font-size:15.5px}
+  .must{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--ink);letter-spacing:.02em}
+  .must.not{color:var(--stop)}
+  .may{font-family:var(--mono);font-size:12.5px;color:var(--muted);letter-spacing:.02em}
+
+  /* ---------- tables ---------- */
+  table.spec{width:100%;border-collapse:collapse;font-size:14.5px;margin:0 0 20px}
+  table.spec th{
+    text-align:left;font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--muted);font-weight:500;border-bottom:1.5px solid var(--ink);padding:0 14px 9px 0
+  }
+  table.spec td{border-bottom:1px solid var(--rule-2);padding:12px 14px 12px 0;vertical-align:top}
+  table.spec td:last-child,table.spec th:last-child{padding-right:0}
+  table.spec .tier{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--ink);white-space:nowrap}
+  table.spec .tier.p{color:var(--navy)}
+  table.spec .tier.c{color:var(--gold)}
+  table.spec .tier.m{color:var(--stop)}
+
+  /* ---------- code / templates ---------- */
+  .tmpl{border:1px solid var(--rule);border-radius:2px;margin:0 0 22px;overflow:hidden;background:#FBFCFD}
+  .tmpl-bar{
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--muted);padding:9px 16px;border-bottom:1px solid var(--rule);background:var(--tint)
+  }
+  pre{
+    margin:0;padding:18px 16px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;
+    line-height:1.75;color:var(--ink);white-space:pre
+  }
+  pre .c{color:var(--muted)}
+  pre .k{color:var(--navy);font-weight:500}
+  pre .r{color:var(--stop)}
+  code{font-family:var(--mono);font-size:.9em;background:var(--tint);padding:1px 5px;border-radius:2px}
+
+  /* ---------- callouts ---------- */
+  .note{
+    border-left:3px solid var(--navy);background:var(--tint);padding:16px 20px;margin:0 0 22px;font-size:15px
+  }
+  .note.warn{border-left-color:var(--stop)}
+  .note .lbl{
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--navy);display:block;margin-bottom:7px
+  }
+  .note.warn .lbl{color:var(--stop)}
+  .note p:last-child{margin-bottom:0}
+
+  .new-tag{
+    font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--stop);border:1px solid var(--stop);border-radius:2px;padding:2px 6px;
+    vertical-align:middle;margin-left:10px;font-weight:500
+  }
+
+  /* ---------- principles ---------- */
+  ol.principles{list-style:none;counter-reset:pr;margin:0;padding:0}
+  ol.principles li{
+    counter-increment:pr;position:relative;padding:12px 0 12px 46px;border-top:1px solid var(--rule-2);
+    margin:0
+  }
+  ol.principles li:last-child{border-bottom:1px solid var(--rule-2)}
+  ol.principles li::before{
+    content:counter(pr,decimal-leading-zero);position:absolute;left:0;top:13px;
+    font-family:var(--mono);font-size:12px;color:var(--gold)
+  }
+  ol.principles b{font-family:var(--sans);font-size:15.5px;color:var(--ink);display:block;margin-bottom:2px}
+  ol.principles span{font-size:14.5px;color:var(--body)}
+
+  /* ---------- footer ---------- */
+  footer.colophon{
+    border-top:2px solid var(--ink);padding-top:24px;margin-top:60px;
+    display:flex;flex-wrap:wrap;gap:24px;justify-content:space-between;font-size:13.5px;color:var(--muted)
+  }
+  footer.colophon strong{display:block;color:var(--ink);font-family:var(--sans);font-size:16px;margin-bottom:3px}
+  footer.colophon .right{text-align:right;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em}
+
+  /* ---------- responsive ---------- */
+  @media (max-width:680px){
+    body{font-size:15.5px}
+    nav.toc ol{columns:1}
+    .clause{grid-template-columns:1fr;gap:4px}
+    .clause .id{padding-top:0}
+    table.spec,table.spec tbody,table.spec tr,table.spec td{display:block;width:100%}
+    table.spec thead{display:none}
+    table.spec tr{border-bottom:1px solid var(--rule);padding:12px 0}
+    table.spec td{border:0;padding:3px 0}
+  }
+  @media print{
+    body{background:#fff;font-size:10.5pt}
+    .page{box-shadow:none;max-width:none;padding:0}
+    section,.clause,.tmpl,table.spec tr{break-inside:avoid}
+    h2.sec{break-after:avoid}
+    nav.toc{break-after:page}
+    a{color:inherit;text-decoration:none}
+    @page{margin:18mm 16mm}
+  }
+</style>
+</head>
+<body>
+<main class="page">
+
+  <!-- ============ TITLE ============ -->
+  <div class="titleblock">
+    <div class="org">
+      <span>The One Ring Framework</span><span class="dot"></span>
+      <span>Open Specification</span><span class="dot"></span>
+      <span>ORF-3.1</span>
+    </div>
+    <h1 class="doc">Builder / Auditor Protocol for AI-Assisted Engineering</h1>
+    <p class="subtitle">A governance protocol placing declared scope, proportionate evidence and independent review around AI-assisted design, modification and audit of software.</p>
+
+    <table class="control">
+      <tr><td>Document</td><td>ORF-3.1 — Builder / Auditor Protocol</td></tr>
+      <tr><td>Status</td><td><span class="status-draft">Proposed open specification — draft for public review.</span> Not adopted or endorsed by any standards body.</td></tr>
+      <tr><td>Author</td><td>Ricky Sng</td></tr>
+      <tr><td>Supersedes</td><td>ORF-2.0 (eleven principles, ungoverned)</td></tr>
+      <tr><td>Principles</td><td>Frozen at eleven. This revision adds governance, not principles.</td></tr>
+      <tr><td>Normative language</td><td>MUST / MUST NOT — mandatory. SHOULD / SHOULD NOT — strong recommendation. MAY — optional.</td></tr>
+      <tr><td>Citation</td><td>Requirements carry stable identifiers, e.g. <code>ORF-3.2</code>. Audit findings cite the identifier.</td></tr>
+      <tr><td>Licence</td><td>Specification text: CC BY 4.0. Templates and checklists: MIT.</td></tr>
+    </table>
+  </div>
+
+  <!-- ============ RULE 0 ============ -->
+  <div class="plate">
+    <p class="lbl">Rule 0 — the ring itself</p>
+    <p>Truth and verification outrank confidence, elegance, speed and agreement.</p>
+    <p>A verified claim and an unverified claim MUST NOT be presented in a form that makes them indistinguishable. The tool advises; the human decides. Every control in this document exists to keep that distinction visible under time pressure.</p>
+  </div>
+
+  <!-- ============ TOC ============ -->
+  <nav class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><span class="n">1</span><a href="#s1">Scope and applicability</a></li>
+      <li><span class="n">2</span><a href="#s2">Terms and definitions</a></li>
+      <li><span class="n">3</span><a href="#s3">Normative architecture</a></li>
+      <li><span class="n">4</span><a href="#s4">Classification and the ratchet</a></li>
+      <li><span class="n">5</span><a href="#s5">The eleven principles</a></li>
+      <li><span class="n">6</span><a href="#s6">Builder protocol</a></li>
+      <li><span class="n">7</span><a href="#s7">Evidence states</a></li>
+      <li><span class="n">8</span><a href="#s8">Auditor protocol and independence</a></li>
+      <li><span class="n">9</span><a href="#s9">Coverage statement</a></li>
+      <li><span class="n">10</span><a href="#s10">Disagreement resolution</a></li>
+      <li><span class="n">11</span><a href="#s11">Re-entry and abort</a></li>
+      <li><span class="n">12</span><a href="#s12">Evidence footer</a></li>
+      <li><span class="n">13</span><a href="#s13">Human sign-off and records</a></li>
+      <li><span class="n">14</span><a href="#s14">Cadence and protocol health</a></li>
+      <li><span class="n">15</span><a href="#s15">Conformance</a></li>
+      <li><span class="n">16</span><a href="#s16">Versioning and change control</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============ 1 ============ -->
+  <section id="s1">
+    <h2 class="sec"><span class="n">1</span>Scope and applicability</h2>
+    <p class="lede">What this protocol governs, and what it deliberately leaves alone.</p>
+    <p>This specification applies to engineering and building work in which an AI system diagnoses, designs, modifies, tests or reviews software. It does not apply to conversational, exploratory or research use, and imposes no ceremony there.</p>
+    <p>The design objective is to raise the probability that AI-assisted engineering work is correct, bounded, reversible where possible, independently reviewable, and supported by evidence proportionate to its consequence.</p>
+
+    <h3 class="sub">This specification is not</h3>
+    <ul>
+      <li>A requirement to run all eleven principles on every task.</li>
+      <li>A substitute for runtime tests, security testing, observability or human accountability.</li>
+      <li>A model-consensus mechanism. Agreement between models is not evidence.</li>
+      <li>Permission for an Auditor to rewrite a build without an explicit role change.</li>
+      <li>An adopted industry standard. It is a proposed open specification, offered for public review and criticism.</li>
+    </ul>
+  </section>
+
+  <!-- ============ 2 ============ -->
+  <section id="s2">
+    <h2 class="sec"><span class="n">2</span>Terms and definitions<span class="new-tag">New in this revision</span></h2>
+    <p class="lede">Three words carry most of the load in this protocol. Undefined, they are the easiest place for it to fail quietly.</p>
+
+    <div class="clause"><span class="id">ORF-2.1</span><p class="txt"><b>Material.</b> A claim, assumption or disagreement is <em>material</em> if the decision would change were it false. Immaterial items are not exempt from honesty, only from ceremony. When materiality is itself disputed, the item is treated as material.</p></div>
+    <div class="clause"><span class="id">ORF-2.2</span><p class="txt"><b>Blast radius.</b> The set of users, data, systems and commitments affected if the change behaves incorrectly — not the size of the diff.</p></div>
+    <div class="clause"><span class="id">ORF-2.3</span><p class="txt"><b>Independent.</b> Review conducted without the builder's session context, without the builder's reasoning, and without authorship attribution. See <a href="#s8">§8</a> for degrees of independence.</p></div>
+    <div class="clause"><span class="id">ORF-2.4</span><p class="txt"><b>Decision owner.</b> The named human accountable for the outcome. Roles may be delegated; accountability is not.</p></div>
+  </section>
+
+  <!-- ============ 3 ============ -->
+  <section id="s3">
+    <h2 class="sec"><span class="n">3</span>Normative architecture</h2>
+    <p class="lede">The pipeline is a loop, not a line.</p>
+    <table class="spec">
+      <thead><tr><th>Stage</th><th>Required control</th></tr></thead>
+      <tbody>
+        <tr><td class="tier">RULE 0</td><td>Truth and verification govern all downstream decisions.</td></tr>
+        <tr><td class="tier">CLASSIFY</td><td>Declare PATCH, CHANGE or COMMITMENT with rationale.</td></tr>
+        <tr><td class="tier">BUILD</td><td>Apply the controls the declared tier requires.</td></tr>
+        <tr><td class="tier">STOP</td><td>Surface scope expansion before acting on it.</td></tr>
+        <tr><td class="tier">VERIFY</td><td>Use evidence appropriate to the class of claim.</td></tr>
+        <tr><td class="tier">AUDIT</td><td>Independent review where the tier requires it; provenance withheld by default.</td></tr>
+        <tr><td class="tier">COVERAGE</td><td>Auditor states checked, not checked, and runtime required.</td></tr>
+        <tr><td class="tier">RESOLVE</td><td>Testable disputes to evidence; non-testable disputes to the human.</td></tr>
+        <tr><td class="tier">SIGN-OFF</td><td>Human approval where the tier requires it.</td></tr>
+        <tr><td class="tier">RE-ENTRY</td><td>Every audit-driven fix returns to CLASSIFY.</td></tr>
+        <tr><td class="tier">SAMPLE</td><td>Periodically audit tier choices and Verified claims.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============ 4 ============ -->
+  <section id="s4">
+    <h2 class="sec"><span class="n">4</span>Classification and the ratchet</h2>
+    <p class="lede">Classification uses impact, reversibility and uncertainty together. The tier controls ceremony — governance must not itself become unnecessary engineering overhead.</p>
+
+    <table class="spec">
+      <thead><tr><th>Tier</th><th>Typical profile</th><th>Mandatory protocol</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="tier p">PATCH</td>
+          <td>Low impact, readily reversible, low uncertainty.</td>
+          <td>Rule 0, classification, Stop Rule, proportionate verification, footer. No mandatory independent audit.</td>
+        </tr>
+        <tr>
+          <td class="tier c">CHANGE</td>
+          <td>Meaningful impact <em>or</em> meaningful reversal cost <em>or</em> material uncertainty.</td>
+          <td>Principles 1–8, verification, independent Auditor, Coverage Statement, footer.</td>
+        </tr>
+        <tr>
+          <td class="tier m">COMMITMENT</td>
+          <td>High impact, difficult or costly to reverse; security, privacy, financial, public or architectural consequence; or high uncertainty.</td>
+          <td>All eleven, strongest appropriate runtime verification, independent Auditor, Coverage Statement, explicit human sign-off.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 class="sub">Classification requirements</h3>
+    <div class="clause"><span class="id">ORF-4.1</span><p class="txt">Where a task spans tiers, the highest applicable tier <span class="must">MUST</span> be used.</p></div>
+    <div class="clause"><span class="id">ORF-4.2</span><p class="txt">Uncertainty about blast radius is itself an escalation signal and <span class="must">MUST</span> be treated as such.</p></div>
+    <div class="clause"><span class="id">ORF-4.3</span><p class="txt">The Builder <span class="may">MAY</span> escalate PATCH → CHANGE → COMMITMENT at any point, without permission.</p></div>
+    <div class="clause"><span class="id">ORF-4.4</span><p class="txt">The Builder <span class="must not">MUST NOT</span> lower a declared tier, including when the work proves easier than expected.</p></div>
+    <div class="clause"><span class="id">ORF-4.5</span><p class="txt">Only the decision owner may downgrade a tier. The downgrade <span class="must">MUST</span> be recorded with rationale.</p></div>
+    <div class="clause"><span class="id">ORF-4.6</span><p class="txt">A fix arising from an audit finding <span class="must not">MUST NOT</span> inherit the original tier. It re-enters at CLASSIFY (<a href="#s11">§11</a>).</p></div>
+
+    <div class="note">
+      <span class="lbl">Rationale</span>
+      <p>Self-classification carries a downward incentive: a lower tier is less work. The ratchet removes the incentive by making escalation free and downgrade a recorded human act. The declared tier is also the cheapest control point available — <code>PATCH — replacing the authentication model</code> is a visible error in one line, without reading the diff.</p>
+    </div>
+  </section>
+
+  <!-- ============ 5 ============ -->
+  <section id="s5">
+    <h2 class="sec"><span class="n">5</span>The eleven principles</h2>
+    <p class="lede">Frozen at eleven. Applied according to tier, not uniformly.</p>
+    <ol class="principles">
+      <li><b>Decompose and budget</b><span>Objective, constraints, stakeholders, dependencies, success criteria and implementation budget. Without a declared budget, scope creep cannot be violated, only felt.</span></li>
+      <li><b>Floor first</b><span>The smallest viable change is the default. Anything larger must justify its complexity before it is built.</span></li>
+      <li><b>Challenge</b><span>Construct the strongest credible alternative and state the conditions under which it would win.</span></li>
+      <li><b>Calibrate</b><span>Separate known, inferred, assumed and unknown material claims.</span></li>
+      <li><b>Evidence</b><span>Verify claims that materially affect the decision; label what was not checked, where it is stated.</span></li>
+      <li><b>Decide with failure condition</b><span>Recommend when evidence permits, and state what would have to be true for the recommendation to fail.</span></li>
+      <li><b>Failure-test</b><span>Hunt edge cases, partial failures, concurrency, hidden dependencies, security risks and irreversible steps.</span></li>
+      <li><b>Stop rule</b><span>If anything outside approved scope becomes necessary: stop, surface it, hand the decision back.</span></li>
+      <li><b>Subtract, then synthesize</b><span>After success, simplify first. Expand only when expected value beats complexity and risk.</span></li>
+      <li><b>Objective-check</b><span>Distinguish task completed from objective advanced.</span></li>
+      <li><b>Reversal evidence</b><span>Record what evidence would cause the decision to be reconsidered, and where it would appear.</span></li>
+    </ol>
+  </section>
+
+  <!-- ============ 6 ============ -->
+  <section id="s6">
+    <h2 class="sec"><span class="n">6</span>Builder protocol</h2>
+    <p class="lede">The Builder may diagnose, design and implement inside approved scope. It may not self-certify acceptance or silently widen scope.</p>
+
+    <div class="clause"><span class="id">ORF-6.1</span><p class="txt">Substantive work <span class="must">MUST</span> open with the Builder header below.</p></div>
+    <div class="clause"><span class="id">ORF-6.2</span><p class="txt">The Builder <span class="must not">MUST NOT</span> remove existing features or controls unless removal is explicitly approved.</p></div>
+    <div class="clause"><span class="id">ORF-6.3</span><p class="txt">The Builder <span class="must not">MUST NOT</span> assert runtime behaviour on the basis of static reasoning (<a href="#s7">§7</a>).</p></div>
+    <div class="clause"><span class="id">ORF-6.4</span><p class="txt">The Builder <span class="must not">MUST NOT</span> act on a scope expansion before a human decision is returned.</p></div>
+
+    <div class="tmpl">
+      <div class="tmpl-bar">Template — Builder header</div>
+<pre><span class="k">Decision tier</span>        : PATCH | CHANGE | COMMITMENT
+<span class="k">Tier rationale</span>       : impact / reversibility / uncertainty
+<span class="k">Objective</span>            : the actual outcome sought
+<span class="k">Success criteria</span>     : observable result
+<span class="k">Constraints</span>          : technical / security / commercial / time
+<span class="k">Approved scope</span>       : what may change
+<span class="k">Out of scope</span>         : what may not change
+<span class="k">Floor proposal</span>       : smallest viable change
+<span class="k">Strongest alternative</span>: credible competing approach</pre>
+    </div>
+
+    <div class="tmpl">
+      <div class="tmpl-bar">Template — Stop rule output</div>
+<pre><span class="r">STOP RULE TRIGGERED</span>
+<span class="k">Scope expansion</span>      : proposed addition or change
+<span class="k">Why necessary</span>        : evidence
+<span class="k">Blast radius</span>         : assessment
+<span class="k">Bounded alternative</span>  : if any
+<span class="k">Recommended decision</span> : proceed | alternative | defer
+<span class="k">Status</span>               : waiting for human decision</pre>
+    </div>
+  </section>
+
+  <!-- ============ 7 ============ -->
+  <section id="s7">
+    <h2 class="sec"><span class="n">7</span>Evidence states</h2>
+    <p class="lede">Four words that are not interchangeable, and one rule that no amount of agreement can override.</p>
+
+    <table class="spec">
+      <thead><tr><th>State</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td class="tier">REVIEWED</td><td>Implementation was inspected statically.</td></tr>
+        <tr><td class="tier">TESTED</td><td>A defined check was executed.</td></tr>
+        <tr><td class="tier">VERIFIED</td><td>Evidence supports the specific material claim being made.</td></tr>
+        <tr><td class="tier">UNRESOLVED</td><td>Available evidence cannot settle the claim.</td></tr>
+      </tbody>
+    </table>
+    <p>Where a change exists but required runtime or integration evidence was not obtained, the required words are: <b>Implemented but not verified.</b></p>
+
+    <div class="note warn">
+      <span class="lbl">ORF-7.1 — Consensus fallacy rule</span>
+      <p>A runtime-required claim <span class="must not">MUST NOT</span> be closed by static review or by model agreement, however many models concur. For runtime-required behaviour the state is <b>verified by runtime evidence</b> or <b>unresolved</b>. There is no third state.</p>
+    </div>
+
+    <h3 class="sub">Runtime-required claims include</h3>
+    <ul>
+      <li>Deployment succeeds.</li>
+      <li>Concurrent writes are safe.</li>
+      <li>Authorization is enforced as intended.</li>
+      <li>Database migration behaves correctly.</li>
+      <li>Quota and rate-limit behaviour is correct.</li>
+      <li>Timezone and scheduled behaviour is correct under execution.</li>
+      <li>Failure recovery and retries behave correctly.</li>
+      <li>External integration works end to end.</li>
+    </ul>
+  </section>
+
+  <!-- ============ 8 ============ -->
+  <section id="s8">
+    <h2 class="sec"><span class="n">8</span>Auditor protocol and independence</h2>
+    <p class="lede">The Auditor is a checker, not a builder. The moment it starts improving the work, the scope-expansion problem re-enters through the review door.</p>
+
+    <div class="clause"><span class="id">ORF-8.1</span><p class="txt">The Auditor <span class="must not">MUST NOT</span> modify the implementation, propose a redesign, or supply replacement code unless the decision owner explicitly changes its role.</p></div>
+    <div class="clause"><span class="id">ORF-8.2</span><p class="txt">Provenance <span class="must">MUST NOT</span> be falsified. It <span class="may">SHOULD</span> be withheld where practical: supply brief, constraints, diff, implementation and evidence without attribution.</p></div>
+    <div class="clause"><span class="id">ORF-8.3</span><p class="txt">Every audit <span class="must">MUST</span> emit a Coverage Statement, including audits with zero findings (<a href="#s9">§9</a>).</p></div>
+    <div class="clause"><span class="id">ORF-8.4</span><p class="txt">Each finding <span class="must">MUST</span> cite the requirement or brief item violated, by identifier where one exists.</p></div>
+
+    <h3 class="sub">Degrees of independence<span class="new-tag">New in this revision</span></h3>
+    <p>Independence is a spectrum, and a claim of independent audit <span class="must">MUST</span> state which level was achieved.</p>
+    <table class="spec">
+      <thead><tr><th>Level</th><th>Condition</th><th>Weight</th></tr></thead>
+      <tbody>
+        <tr><td class="tier">L0</td><td>Same session, same model, builder context retained.</td><td>Self-review. Not an audit; must be labelled as such.</td></tr>
+        <tr><td class="tier">L1</td><td>Fresh session, same model, context withheld.</td><td>Detects regressions and brief deviations. Shares the builder's blind spots.</td></tr>
+        <tr><td class="tier">L2</td><td>Different model family, context and attribution withheld.</td><td>Minimum for CHANGE and above.</td></tr>
+        <tr><td class="tier">L3</td><td>Different model family plus a human reviewer.</td><td>Recommended for COMMITMENT.</td></tr>
+      </tbody>
+    </table>
+    <div class="note warn">
+      <span class="lbl">ORF-8.5 — Correlated failure</span>
+      <p>Models trained on overlapping data can fail in overlapping directions. Agreement between AI reviewers <span class="must not">MUST NOT</span> be treated as independent corroboration and <span class="must not">MUST NOT</span> increase the verification state of a claim where correlated failure modes may exist. Disagreement <span class="may">SHOULD</span> be treated as a signal requiring resolution through evidence or human decision, as applicable.</p>
+    </div>
+
+    <div class="tmpl">
+      <div class="tmpl-bar">Template — Auditor contract</div>
+<pre><span class="c">// Findings-only audit</span>
+Audit against the supplied brief and constraints.
+Do not rewrite or improve the implementation.
+
+Check for:
+  deviations from brief or constraints
+  silent removals and regressions
+  tier misclassification
+  unsupported Verified claims
+  unapproved scope expansion
+  missing tests
+  partial-failure, concurrency, auth, security,
+    quota and rollback risks
+
+Per finding:
+  <span class="k">Severity</span> | <span class="k">Finding</span> | <span class="k">Evidence</span> | <span class="k">Requirement violated</span> | <span class="k">Verification required</span></pre>
+    </div>
+  </section>
+
+  <!-- ============ 9 ============ -->
+  <section id="s9">
+    <h2 class="sec"><span class="n">9</span>Coverage statement</h2>
+    <p class="lede">Silence is not a clean audit. An audit that never says what it could not see is not itself auditable.</p>
+    <div class="tmpl">
+      <div class="tmpl-bar">Template — Coverage statement</div>
+<pre><span class="k">INDEPENDENCE LEVEL</span> : L0 | L1 | L2 | L3
+<span class="k">CHECKED</span>            : areas actually inspected
+<span class="k">NOT CHECKED</span>        : areas not inspected, and why
+<span class="k">RUNTIME REQUIRED</span>   : claims that cannot be settled statically
+<span class="k">EVIDENCE LIMITS</span>    : missing brief, diff, logs, environment,
+                       credentials, test data
+<span class="k">FINDINGS COUNT</span>     : Critical n | High n | Medium n | Low n
+<span class="k">AUDIT RESULT</span>       : findings present
+                     | no findings in checked scope
+                     | inconclusive</pre>
+    </div>
+    <p>Note the permitted results. <em>No findings in checked scope</em> is not <em>clean</em>, and <em>inconclusive</em> is a legitimate outcome that <span class="must not">MUST NOT</span> be upgraded for tidiness.</p>
+  </section>
+
+  <!-- ============ 10 ============ -->
+  <section id="s10">
+    <h2 class="sec"><span class="n">10</span>Disagreement resolution</h2>
+    <p class="lede">Disagreement exposes uncertainty. It is not settled by voting, and not by whichever explanation reads better.</p>
+    <table class="spec">
+      <thead><tr><th>Disagreement</th><th>Resolution</th></tr></thead>
+      <tbody>
+        <tr><td>Behavioural, falsifiable</td><td>Define the smallest disputed claim and run a check capable of settling it.</td></tr>
+        <tr><td>Runtime-required</td><td>Runtime evidence, or UNRESOLVED.</td></tr>
+        <tr><td>Maintainability, naming, boundary placement, long-term cost</td><td>Log as an OPEN QUESTION and route to the decision owner.</td></tr>
+        <tr><td>Insufficient evidence</td><td>UNRESOLVED until evidence becomes available.</td></tr>
+      </tbody>
+    </table>
+    <div class="note warn">
+      <span class="lbl">ORF-10.1 — No rhetorical settlement</span>
+      <p>A material disagreement that no test can settle <span class="must not">MUST NOT</span> be marked resolved because one party argued more convincingly. It remains open, in writing, until the decision owner closes it.</p>
+    </div>
+  </section>
+
+  <!-- ============ 11 ============ -->
+  <section id="s11">
+    <h2 class="sec"><span class="n">11</span>Re-entry and abort</h2>
+    <p class="lede">Remediation is work, and work is classified.</p>
+    <div class="clause"><span class="id">ORF-11.1</span><p class="txt">Every remediation prompted by an audit finding <span class="must">MUST</span> re-enter at CLASSIFY. A one-line fix in authentication middleware is not a PATCH because the finding was small.</p></div>
+    <div class="clause"><span class="id">ORF-11.2</span><p class="txt">Where a COMMITMENT fails after sign-off, the rollback or mitigation <span class="must">MUST</span> itself be classified, and <span class="may">SHOULD</span> be pre-classified at sign-off time rather than under incident pressure.<span class="new-tag">New</span></p></div>
+    <div class="clause"><span class="id">ORF-11.3</span><p class="txt">Where the decision owner is unavailable, work <span class="must">MUST</span> default to DEFER. Absence of a human response is never approval.<span class="new-tag">New</span></p></div>
+  </section>
+
+  <!-- ============ 12 ============ -->
+  <section id="s12">
+    <h2 class="sec"><span class="n">12</span>Evidence footer</h2>
+    <p class="lede">Principles describe intent. A fixed output shape is the part that binds — a violated principle is invisible; a missing line is not.</p>
+    <div class="tmpl">
+      <div class="tmpl-bar">Template — Evidence footer</div>
+<pre><span class="k">Decision tier</span>            : PATCH | CHANGE | COMMITMENT
+<span class="k">Tier rationale</span>           : impact / reversibility / uncertainty
+<span class="k">Tier changes</span>             : none | escalation history
+<span class="k">Human downgrade</span>          : none | recorded rationale
+<span class="k">Assumed</span>                  : material assumptions
+<span class="k">Verified</span>                 : claims + the evidence for each
+<span class="k">Unverified / unresolved</span>  : claims not settled
+<span class="k">Scope added beyond brief</span> : none | approved change
+<span class="k">Verification run</span>         : exact commands — PASS | FAIL | NOT RUN
+<span class="k">Runtime-required claims</span>  : verified by runtime evidence | unresolved
+<span class="k">Original failure reproduced</span>: yes | no | N/A
+<span class="k">Regression checks</span>        : what was checked
+<span class="k">Remaining risks</span>          : residual risks
+<span class="k">Reversal evidence</span>        : what would trigger reconsideration
+<span class="k">Human sign-off required</span>  : yes | no</pre>
+    </div>
+    <p class="lede" style="margin-bottom:0">For PATCH work the footer <span class="may">MAY</span> be reduced to tier, verification run, unverified claims and scope added. Full footers on trivial work train people to stop reading them.</p>
+  </section>
+
+  <!-- ============ 13 ============ -->
+  <section id="s13">
+    <h2 class="sec"><span class="n">13</span>Human sign-off and records</h2>
+    <div class="tmpl">
+      <div class="tmpl-bar">Template — Decision owner record</div>
+<pre><span class="k">Decision</span>            : ACCEPT | REJECT | REMEDIATE | DEFER
+<span class="k">Final tier</span>          : PATCH | CHANGE | COMMITMENT
+<span class="k">Human downgrade</span>     : none | rationale
+<span class="k">Open questions accepted</span>     : list
+<span class="k">Unresolved runtime claims accepted</span>: list | none
+<span class="k">Residual risks accepted</span>     : list
+<span class="k">Required follow-up</span>  : list
+<span class="k">Decision owner</span>      : name / role
+<span class="k">Date</span>                : date</pre>
+    </div>
+    <div class="clause"><span class="id">ORF-13.1</span><p class="txt">Records for CHANGE and COMMITMENT work — builder header, audit findings, coverage statement, footer and sign-off — <span class="must">MUST</span> be retained where the next person to touch the system can find them. A record kept only in a chat transcript is not retained.<span class="new-tag">New</span></p></div>
+    <div class="clause"><span class="id">ORF-13.2</span><p class="txt">Accepting an unresolved runtime claim is a permitted decision. Recording it as verified is not.</p></div>
+  </section>
+
+  <!-- ============ 14 ============ -->
+  <section id="s14">
+    <h2 class="sec"><span class="n">14</span>Cadence and protocol health<span class="new-tag">Extended</span></h2>
+    <p class="lede">A protocol nobody audits becomes a formatting habit. These are the indicators that it is still doing work.</p>
+    <ul>
+      <li>At the start of a substantive session, sample one tier classification from the previous session.</li>
+      <li>Select one prior VERIFIED claim at random and inspect the evidence behind it.</li>
+      <li>Review recurring audit misses by strengthening tests, not by adding prose controls.</li>
+      <li>Do not run full ceremony on PATCH work unless the task escalates.</li>
+    </ul>
+    <h3 class="sub">Health indicators</h3>
+    <table class="spec">
+      <thead><tr><th>Signal</th><th>Reading</th></tr></thead>
+      <tbody>
+        <tr><td>Escalation rate near zero</td><td>The ratchet is decorative. Classification is being set once and defended.</td></tr>
+        <tr><td>PATCH share rising over time</td><td>Ceremony is being avoided by under-declaring. Sample harder.</td></tr>
+        <tr><td>Audits returning zero findings repeatedly</td><td>Independence is probably L0 or L1 in practice, or the package is incomplete.</td></tr>
+        <tr><td>UNRESOLVED count always zero</td><td>Runtime claims are being closed statically somewhere.</td></tr>
+        <tr><td>Footers identical across tasks</td><td>The footer has become a template, not a report.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============ 15 ============ -->
+  <section id="s15">
+    <h2 class="sec"><span class="n">15</span>Conformance<span class="new-tag">New in this revision</span></h2>
+    <p class="lede">A specification without a conformance clause cannot be complied with, only admired.</p>
+    <div class="clause"><span class="id">ORF-15.1</span><p class="txt">Conformance is claimed <b>per change</b>, never per team or per organisation. "We follow ORF-3.1" is not a conformance claim.</p></div>
+    <div class="clause"><span class="id">ORF-15.2</span><p class="txt"><b>Conformant.</b> Every MUST applicable to the declared tier was satisfied, and the record exists to show it.</p></div>
+    <div class="clause"><span class="id">ORF-15.3</span><p class="txt"><b>Partially conformant.</b> One or more MUST requirements were not met, each named with its identifier and the reason. This is an honest and permitted state.</p></div>
+    <div class="clause"><span class="id">ORF-15.4</span><p class="txt"><b>Non-conformant.</b> A MUST was not met and was not disclosed. Undisclosed shortfall is the only failure this specification treats as a breach of Rule 0.</p></div>
+  </section>
+
+  <!-- ============ 16 ============ -->
+  <section id="s16">
+    <h2 class="sec"><span class="n">16</span>Versioning and change control<span class="new-tag">New in this revision</span></h2>
+    <div class="clause"><span class="id">ORF-16.1</span><p class="txt">The eleven principles are frozen. Additions are made to the governance layer, not the principle list.</p></div>
+    <div class="note"><span class="lbl">Versioning applicability</span><p>The versioning rules in this section apply to releases following ORF-3.1. ORF-3.1 establishes the baseline governance requirements from which subsequent releases are versioned.</p></div>
+    <div class="clause"><span class="id">ORF-16.2</span><p class="txt">For releases after ORF-3.1, a change that adds or strengthens a MUST is a major version. A change that adds a SHOULD, a template or a clarification is a minor version.</p></div>
+    <div class="clause"><span class="id">ORF-16.3</span><p class="txt">Requirement identifiers are stable across versions. A withdrawn requirement is marked withdrawn; its identifier is never reused.</p></div>
+    <div class="clause"><span class="id">ORF-16.4</span><p class="txt">Tier thresholds <span class="may">SHOULD</span> be refined from observed misclassification in real work, not from theoretical edge cases.</p></div>
+  </section>
+
+  <footer class="colophon">
+    <div>
+      <strong>The One Ring Framework v3.1</strong>
+      Ricky Sng · Proposed open specification, draft for public review.<br>
+      Specification text CC BY 4.0 · templates and checklists MIT.
+    </div>
+    <div class="right">
+      Not a more impressive answer.<br>A higher probability of being right.
+    </div>
+  </footer>
+
+</main>
+</body>
+</html>
