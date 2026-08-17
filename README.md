@@ -1,6 +1,8 @@
 # The One Ring Framework v3.1
 ## An Open Builder / Auditor Protocol for AI-Assisted Engineering
 
+![The One Ring Framework v3.1](assets/infographic.png)
+
 **Author: Ricky Sng**
 
 Rule 0: **Truth and verification outrank confidence, elegance, speed and agreement.**
