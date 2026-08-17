@@ -1,5 +1,3 @@
-# The One Ring Framework v3.1
-## An Open Builder / Auditor Protocol for AI-Assisted Engineering
 
 ![The One Ring Framework v3.1](assets/infographic.png)
 
