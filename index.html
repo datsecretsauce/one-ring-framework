@@ -224,8 +224,10 @@
     <table class="control">
       <tr><td>Document</td><td>ORF-3.1 — Builder / Auditor Protocol</td></tr>
       <tr><td>Status</td><td><span class="status-draft">Proposed open specification — draft for public review.</span> Not adopted or endorsed by any standards body.</td></tr>
+      <tr><td>Public review revision</td><td>Revision 2 — explicit workflow transitions, project-specification integration, material-assumption control and artifact economy.</td></tr>
       <tr><td>Author</td><td>Ricky Sng</td></tr>
-      <tr><td>Supersedes</td><td>ORF-2.0 (eleven principles, ungoverned)</td></tr>
+      <tr><td>Contributor</td><td>Jason Chow</td></tr>
+      <tr><td>Supersedes</td><td>ORF-2.0 (earlier eleven-principle framework revision)</td></tr>
       <tr><td>Principles</td><td>Frozen at eleven. This revision adds governance, not principles.</td></tr>
       <tr><td>Normative language</td><td>MUST / MUST NOT — mandatory. SHOULD / SHOULD NOT — strong recommendation. MAY — optional.</td></tr>
       <tr><td>Citation</td><td>Requirements carry stable identifiers, e.g. <code>ORF-3.2</code>. Audit findings cite the identifier.</td></tr>
@@ -269,6 +271,7 @@
     <p class="lede">What this protocol governs, and what it deliberately leaves alone.</p>
     <p>This specification applies to engineering and building work in which an AI system diagnoses, designs, modifies, tests or reviews software. It does not apply to conversational, exploratory or research use, and imposes no ceremony there.</p>
     <p>The design objective is to raise the probability that AI-assisted engineering work is correct, bounded, reversible where possible, independently reviewable, and supported by evidence proportionate to its consequence.</p>
+    <p>ORF is a governance and audit overlay, not a software-development lifecycle. It is designed to sit on top of existing engineering methods, including spec-driven development, test-driven development and project-specific delivery processes. Where a governing project specification exists, ORF uses it as audit input rather than replacing it.</p>
 
     <h3 class="sub">This specification is not</h3>
     <ul>
@@ -289,12 +292,14 @@
     <div class="clause"><span class="id">ORF-2.2</span><p class="txt"><b>Blast radius.</b> The set of users, data, systems and commitments affected if the change behaves incorrectly — not the size of the diff.</p></div>
     <div class="clause"><span class="id">ORF-2.3</span><p class="txt"><b>Independent.</b> Review conducted without the builder's session context, without the builder's reasoning, and without authorship attribution. See <a href="#s8">§8</a> for degrees of independence.</p></div>
     <div class="clause"><span class="id">ORF-2.4</span><p class="txt"><b>Decision owner.</b> The named human accountable for the outcome. Roles may be delegated; accountability is not.</p></div>
+    <div class="clause"><span class="id">ORF-2.5</span><p class="txt"><b>Governing specification.</b> The project-specific source of requirements and constraints against which a change is built and audited. It may include a product or technical specification, acceptance criteria, constitution or construction file, ADRs, security requirements, interface contracts or equivalent project artifacts.</p></div>
+    <div class="clause"><span class="id">ORF-2.6</span><p class="txt"><b>Change Record.</b> The persistent evidence record for one engineering change. It accumulates classification, scope decisions, verification, audit findings, coverage and human decisions so the protocol does not regenerate the same context as separate artifacts.</p></div>
   </section>
 
   <!-- ============ 3 ============ -->
   <section id="s3">
     <h2 class="sec"><span class="n">3</span>Normative architecture</h2>
-    <p class="lede">The pipeline is a loop, not a line.</p>
+    <p class="lede">The pipeline is a stateful loop, not a line. Each return path is explicit.</p>
     <table class="spec">
       <thead><tr><th>Stage</th><th>Required control</th></tr></thead>
       <tbody>
@@ -307,10 +312,28 @@
         <tr><td class="tier">COVERAGE</td><td>Auditor states checked, not checked, and runtime required.</td></tr>
         <tr><td class="tier">RESOLVE</td><td>Testable disputes to evidence; non-testable disputes to the human.</td></tr>
         <tr><td class="tier">SIGN-OFF</td><td>Human approval where the tier requires it.</td></tr>
-        <tr><td class="tier">RE-ENTRY</td><td>Every audit-driven fix returns to CLASSIFY.</td></tr>
+        <tr><td class="tier">CLOSE</td><td>Record final state, residual risk and unresolved items.</td></tr>
         <tr><td class="tier">SAMPLE</td><td>Periodically audit tier choices and Verified claims.</td></tr>
       </tbody>
     </table>
+
+    <h3 class="sub">Required state transitions <span class="new-tag">Clarified in public review</span></h3>
+    <table class="spec">
+      <thead><tr><th>Trigger</th><th>Required next state</th></tr></thead>
+      <tbody>
+        <tr><td>New engineering task</td><td>CLASSIFY before substantive implementation.</td></tr>
+        <tr><td>Scope expansion discovered</td><td>STOP → human decision. If approved, the expanded work returns to CLASSIFY. If rejected, remain inside prior scope or DEFER.</td></tr>
+        <tr><td>Verification failure requiring implementation change</td><td>Return to CLASSIFY before remediation. A diagnostic re-run that changes no implementation may remain in VERIFY.</td></tr>
+        <tr><td>Audit finding requiring remediation</td><td>Return to CLASSIFY. The remediation does not inherit the tier of the original change.</td></tr>
+        <tr><td>Runtime-required claim unresolved</td><td>Remain UNRESOLVED until runtime evidence is obtained, or route the unresolved risk to the human decision owner.</td></tr>
+        <tr><td>Non-testable material disagreement</td><td>Log an OPEN QUESTION and route to the human decision owner.</td></tr>
+        <tr><td>PATCH verification succeeds</td><td>CLOSE, unless the task escalated or a Stop Rule decision is outstanding.</td></tr>
+        <tr><td>CHANGE / COMMITMENT verification succeeds</td><td>AUDIT → COVERAGE → RESOLVE as required → SIGN-OFF where required → CLOSE.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="clause"><span class="id">ORF-3.1</span><p class="txt">A transition that changes implementation scope, behaviour or risk <span class="must">MUST</span> pass through CLASSIFY before implementation continues.</p></div>
+    <div class="clause"><span class="id">ORF-3.2</span><p class="txt">A protocol state <span class="must not">MUST NOT</span> be treated as closed while a required Stop Rule decision, required audit, required sign-off or undisclosed material unresolved claim remains outstanding.</p></div>
   </section>
 
   <!-- ============ 4 ============ -->
@@ -361,7 +384,7 @@
       <li><b>Decompose and budget</b><span>Objective, constraints, stakeholders, dependencies, success criteria and implementation budget. Without a declared budget, scope creep cannot be violated, only felt.</span></li>
       <li><b>Floor first</b><span>The smallest viable change is the default. Anything larger must justify its complexity before it is built.</span></li>
       <li><b>Challenge</b><span>Construct the strongest credible alternative and state the conditions under which it would win.</span></li>
-      <li><b>Calibrate</b><span>Separate known, inferred, assumed and unknown material claims.</span></li>
+      <li><b>Calibrate</b><span>Separate known, inferred, assumed and unknown material claims. No material assumption silently becomes fact.</span></li>
       <li><b>Evidence</b><span>Verify claims that materially affect the decision; label what was not checked, where it is stated.</span></li>
       <li><b>Decide with failure condition</b><span>Recommend when evidence permits, and state what would have to be true for the recommendation to fail.</span></li>
       <li><b>Failure-test</b><span>Hunt edge cases, partial failures, concurrency, hidden dependencies, security risks and irreversible steps.</span></li>
@@ -375,12 +398,14 @@
   <!-- ============ 6 ============ -->
   <section id="s6">
     <h2 class="sec"><span class="n">6</span>Builder protocol</h2>
-    <p class="lede">The Builder may diagnose, design and implement inside approved scope. It may not self-certify acceptance or silently widen scope.</p>
+    <p class="lede">The Builder may diagnose, design and implement inside approved scope. It may not self-certify acceptance, silently widen scope, or silently promote assumptions into facts.</p>
 
     <div class="clause"><span class="id">ORF-6.1</span><p class="txt">Substantive work <span class="must">MUST</span> open with the Builder header below.</p></div>
     <div class="clause"><span class="id">ORF-6.2</span><p class="txt">The Builder <span class="must not">MUST NOT</span> remove existing features or controls unless removal is explicitly approved.</p></div>
     <div class="clause"><span class="id">ORF-6.3</span><p class="txt">The Builder <span class="must not">MUST NOT</span> assert runtime behaviour on the basis of static reasoning (<a href="#s7">§7</a>).</p></div>
     <div class="clause"><span class="id">ORF-6.4</span><p class="txt">The Builder <span class="must not">MUST NOT</span> act on a scope expansion before a human decision is returned.</p></div>
+    <div class="clause"><span class="id">ORF-6.5</span><p class="txt">A material assumption <span class="must">MUST</span> be labelled as assumed and <span class="must not">MUST NOT</span> be promoted to known or Verified without evidence. Where a material assumption can be checked at reasonable cost before it becomes implementation dependency, it <span class="may">SHOULD</span> be checked.</p></div>
+    <div class="clause"><span class="id">ORF-6.6</span><p class="txt">For CHANGE and COMMITMENT work, the Builder <span class="may">SHOULD</span> update one persistent Change Record rather than regenerate equivalent context as multiple standalone artifacts (<a href="#s14">§14</a>).</p></div>
 
     <div class="tmpl">
       <div class="tmpl-bar">Template — Builder header</div>
@@ -388,9 +413,11 @@
 <span class="k">Tier rationale</span>       : impact / reversibility / uncertainty
 <span class="k">Objective</span>            : the actual outcome sought
 <span class="k">Success criteria</span>     : observable result
+<span class="k">Governing spec</span>       : path / link / identifier | none supplied
 <span class="k">Constraints</span>          : technical / security / commercial / time
 <span class="k">Approved scope</span>       : what may change
 <span class="k">Out of scope</span>         : what may not change
+<span class="k">Material assumptions</span>: assumptions that could change the decision
 <span class="k">Floor proposal</span>       : smallest viable change
 <span class="k">Strongest alternative</span>: credible competing approach</pre>
     </div>
@@ -444,22 +471,30 @@
   <!-- ============ 8 ============ -->
   <section id="s8">
     <h2 class="sec"><span class="n">8</span>Auditor protocol and independence</h2>
-    <p class="lede">The Auditor is a checker, not a builder. The moment it starts improving the work, the scope-expansion problem re-enters through the review door.</p>
+    <p class="lede">The Auditor is a checker, not a builder. ORF audits the engineering method and project specification already in use; it does not replace them.</p>
 
     <div class="clause"><span class="id">ORF-8.1</span><p class="txt">The Auditor <span class="must not">MUST NOT</span> modify the implementation, propose a redesign, or supply replacement code unless the decision owner explicitly changes its role.</p></div>
-    <div class="clause"><span class="id">ORF-8.2</span><p class="txt">Provenance <span class="must">MUST NOT</span> be falsified. It <span class="may">SHOULD</span> be withheld where practical: supply brief, constraints, diff, implementation and evidence without attribution.</p></div>
+    <div class="clause"><span class="id">ORF-8.2</span><p class="txt">Provenance <span class="must not">MUST NOT</span> be falsified. It <span class="may">SHOULD</span> be withheld where practical: supply brief, constraints, diff, implementation and evidence without attribution.</p></div>
     <div class="clause"><span class="id">ORF-8.3</span><p class="txt">Every audit <span class="must">MUST</span> emit a Coverage Statement, including audits with zero findings (<a href="#s9">§9</a>).</p></div>
     <div class="clause"><span class="id">ORF-8.4</span><p class="txt">Each finding <span class="must">MUST</span> cite the requirement or brief item violated, by identifier where one exists.</p></div>
+    <div class="clause"><span class="id">ORF-8.6</span><p class="txt">Where a governing project specification is supplied, the Auditor <span class="must">MUST</span> treat its requirements, acceptance criteria and project-specific constraints as first-class audit requirements. ORF's generic risk checks are a baseline, not a ceiling.</p></div>
+    <div class="clause"><span class="id">ORF-8.7</span><p class="txt">If an expected governing specification, construction/constitution file, acceptance criteria or equivalent project artifact is unavailable, the Auditor <span class="must">MUST</span> disclose that absence under EVIDENCE LIMITS in the Coverage Statement.</p></div>
 
-    <h3 class="sub">Degrees of independence<span class="new-tag">New in this revision</span></h3>
-    <p>Independence is a spectrum, and a claim of independent audit <span class="must">MUST</span> state which level was achieved.</p>
+    <h3 class="sub">Compatibility with spec-driven development <span class="new-tag">Added from public review</span></h3>
+    <div class="note">
+      <span class="lbl">Governance overlay</span>
+      <p>In a spec-driven workflow, the project specification defines what is to be built; ORF governs how the AI Builder handles scope, evidence, verification and independent challenge. The Auditor contract inherits project-specific requirements from the governing specification instead of relying only on generic review prompts.</p>
+    </div>
+
+    <h3 class="sub">Degrees of independence</h3>
+    <p>Independence is a spectrum, and a claim of independent audit <span class="must">MUST</span> state which level was achieved. Proportionality remains tier-based: L3 is not mandatory for every PATCH.</p>
     <table class="spec">
       <thead><tr><th>Level</th><th>Condition</th><th>Weight</th></tr></thead>
       <tbody>
         <tr><td class="tier">L0</td><td>Same session, same model, builder context retained.</td><td>Self-review. Not an audit; must be labelled as such.</td></tr>
         <tr><td class="tier">L1</td><td>Fresh session, same model, context withheld.</td><td>Detects regressions and brief deviations. Shares the builder's blind spots.</td></tr>
         <tr><td class="tier">L2</td><td>Different model family, context and attribution withheld.</td><td>Minimum for CHANGE and above.</td></tr>
-        <tr><td class="tier">L3</td><td>Different model family plus a human reviewer.</td><td>Recommended for COMMITMENT.</td></tr>
+        <tr><td class="tier">L3</td><td>Different model family plus a human reviewer.</td><td>Recommended for COMMITMENT and may be required by project policy.</td></tr>
       </tbody>
     </table>
     <div class="note warn">
@@ -470,10 +505,15 @@
     <div class="tmpl">
       <div class="tmpl-bar">Template — Auditor contract</div>
 <pre><span class="c">// Findings-only audit</span>
-Audit against the supplied brief and constraints.
+Audit against the supplied brief, governing project specification,
+acceptance criteria and constraints.
 Do not rewrite or improve the implementation.
 
-Check for:
+Project-specific requirements:
+  inherit requirements / controls from the governing specification
+  cite the project requirement identifier where one exists
+
+Generic baseline checks:
   deviations from brief or constraints
   silent removals and regressions
   tier misclassification
@@ -498,8 +538,8 @@ Per finding:
 <span class="k">CHECKED</span>            : areas actually inspected
 <span class="k">NOT CHECKED</span>        : areas not inspected, and why
 <span class="k">RUNTIME REQUIRED</span>   : claims that cannot be settled statically
-<span class="k">EVIDENCE LIMITS</span>    : missing brief, diff, logs, environment,
-                       credentials, test data
+<span class="k">EVIDENCE LIMITS</span>    : missing brief, governing spec, diff, logs,
+                       environment, credentials, test data
 <span class="k">FINDINGS COUNT</span>     : Critical n | High n | Medium n | Low n
 <span class="k">AUDIT RESULT</span>       : findings present
                      | no findings in checked scope
@@ -545,6 +585,8 @@ Per finding:
 <pre><span class="k">Decision tier</span>            : PATCH | CHANGE | COMMITMENT
 <span class="k">Tier rationale</span>           : impact / reversibility / uncertainty
 <span class="k">Tier changes</span>             : none | escalation history
+<span class="k">Governing specification</span>    : path / link / identifier | none supplied
+<span class="k">Change Record</span>              : identifier / path | compact PATCH record
 <span class="k">Human downgrade</span>          : none | recorded rationale
 <span class="k">Assumed</span>                  : material assumptions
 <span class="k">Verified</span>                 : claims + the evidence for each
@@ -576,14 +618,38 @@ Per finding:
 <span class="k">Decision owner</span>      : name / role
 <span class="k">Date</span>                : date</pre>
     </div>
-    <div class="clause"><span class="id">ORF-13.1</span><p class="txt">Records for CHANGE and COMMITMENT work — builder header, audit findings, coverage statement, footer and sign-off — <span class="must">MUST</span> be retained where the next person to touch the system can find them. A record kept only in a chat transcript is not retained.<span class="new-tag">New</span></p></div>
+    <div class="clause"><span class="id">ORF-13.1</span><p class="txt">Records for CHANGE and COMMITMENT work — whether stored as one Change Record or linked artifacts — <span class="must">MUST</span> retain the builder header, audit findings, coverage statement, evidence footer and sign-off where the next person to touch the system can find them. A record kept only in a chat transcript is not retained.<span class="new-tag">New</span></p></div>
     <div class="clause"><span class="id">ORF-13.2</span><p class="txt">Accepting an unresolved runtime claim is a permitted decision. Recording it as verified is not.</p></div>
   </section>
 
   <!-- ============ 14 ============ -->
   <section id="s14">
-    <h2 class="sec"><span class="n">14</span>Cadence and protocol health<span class="new-tag">Extended</span></h2>
-    <p class="lede">A protocol nobody audits becomes a formatting habit. These are the indicators that it is still doing work.</p>
+    <h2 class="sec"><span class="n">14</span>Artifact economy and protocol health<span class="new-tag">Extended from public review</span></h2>
+    <p class="lede">Governance must cost less than the failure it is meant to prevent. Produce the minimum evidence required by the tier, without hiding material uncertainty.</p>
+
+    <div class="clause"><span class="id">ORF-14.1</span><p class="txt">Protocol artifacts <span class="may">SHOULD</span> be the minimum sufficient to satisfy the declared tier. Repeating unchanged context across artifacts is discouraged.</p></div>
+    <div class="clause"><span class="id">ORF-14.2</span><p class="txt">PATCH work <span class="may">SHOULD</span> use the compact record permitted by this specification and <span class="must not">MUST NOT</span> require an independent audit solely for ORF conformance unless the task escalates or project policy requires one.</p></div>
+    <div class="clause"><span class="id">ORF-14.3</span><p class="txt">CHANGE and COMMITMENT work <span class="may">SHOULD</span> maintain one evolving Change Record that references existing specifications, diffs, logs and test evidence rather than reproducing them in full.</p></div>
+    <div class="clause"><span class="id">ORF-14.4</span><p class="txt">Existing project artifacts <span class="may">SHOULD</span> be referenced by stable path, link, commit, hash or identifier where that preserves auditability. Copying them into every ORF output is unnecessary.</p></div>
+    <div class="clause"><span class="id">ORF-14.5</span><p class="txt">Artifact economy <span class="must not">MUST NOT</span> be used to omit mandatory evidence, hide an unresolved material claim, or bypass a tier-required audit or sign-off.</p></div>
+    <div class="clause"><span class="id">ORF-14.6</span><p class="txt">For AI-executed workflows, context and token cost <span class="may">SHOULD</span> be treated as engineering resources. Where the environment can retrieve a stable artifact by path, link, commit or identifier, unchanged content <span class="may">SHOULD</span> be referenced rather than repeatedly reproduced.</p></div>
+
+    <div class="tmpl">
+      <div class="tmpl-bar">Template — Evolving Change Record</div>
+<pre><span class="k">Change ID</span>            : stable identifier
+<span class="k">Tier / rationale</span>      : current tier + escalation history
+<span class="k">Governing spec</span>        : path / link / commit / identifier
+<span class="k">Scope</span>                 : approved / out of scope
+<span class="k">Material assumptions</span>  : current state + evidence links
+<span class="k">Builder decisions</span>     : concise decision log
+<span class="k">Stop Rule events</span>      : none | decisions and approvals
+<span class="k">Verification evidence</span>: commands / results / evidence refs
+<span class="k">Audit</span>                 : findings + coverage refs
+<span class="k">Human decisions</span>      : downgrade / risk acceptance / sign-off
+<span class="k">Open questions</span>       : unresolved material items</pre>
+    </div>
+
+    <h3 class="sub">Cadence</h3>
     <ul>
       <li>At the start of a substantive session, sample one tier classification from the previous session.</li>
       <li>Select one prior VERIFIED claim at random and inspect the evidence behind it.</li>
@@ -595,10 +661,12 @@ Per finding:
       <thead><tr><th>Signal</th><th>Reading</th></tr></thead>
       <tbody>
         <tr><td>Escalation rate near zero</td><td>The ratchet is decorative. Classification is being set once and defended.</td></tr>
-        <tr><td>PATCH share rising over time</td><td>Ceremony is being avoided by under-declaring. Sample harder.</td></tr>
-        <tr><td>Audits returning zero findings repeatedly</td><td>Independence is probably L0 or L1 in practice, or the package is incomplete.</td></tr>
-        <tr><td>UNRESOLVED count always zero</td><td>Runtime claims are being closed statically somewhere.</td></tr>
+        <tr><td>PATCH share rising over time</td><td>Ceremony may be being avoided by under-declaring. Sample harder.</td></tr>
+        <tr><td>Audits returning zero findings repeatedly</td><td>Independence may be too weak in practice, or the audit package may be incomplete.</td></tr>
+        <tr><td>UNRESOLVED count always zero</td><td>Runtime claims may be getting closed statically somewhere.</td></tr>
         <tr><td>Footers identical across tasks</td><td>The footer has become a template, not a report.</td></tr>
+        <tr><td>Artifact count grows without new evidence</td><td>The protocol is generating ceremony rather than assurance. Consolidate into the Change Record.</td></tr>
+        <tr><td>Large context repeatedly copied between stages</td><td>Token and review cost are being spent on duplication. Reference stable project artifacts instead.</td></tr>
       </tbody>
     </table>
   </section>
@@ -626,7 +694,7 @@ Per finding:
   <footer class="colophon">
     <div>
       <strong>The One Ring Framework v3.1</strong>
-      Ricky Sng · Proposed open specification, draft for public review.<br>
+      Ricky Sng · Proposed open specification, draft for public review · Revision 2.<br>
       Specification text CC BY 4.0 · templates and checklists MIT.
     </div>
     <div class="right">
